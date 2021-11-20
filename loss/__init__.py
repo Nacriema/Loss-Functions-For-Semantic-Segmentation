@@ -19,6 +19,10 @@ max or not.
 
 May be I need to convert each function inside the forward pass to the function that take the input and target as softmax
 probability, inside the forward pass we just convert the logits into it
+
+
+Should use each function, because most other functions like Exponential Logarithmic Loss use the result of the defined
+function above for compute.
 """
 import torch
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
@@ -42,14 +46,22 @@ def get_loss(name):
     }[name]
 
 
+def soft_dice_loss(output, target, epsilon=1e-6):
+    numerator = 2. * torch.sum(output * target, dim=(-2, -1))
+    denominator = torch.sum(output + target, dim=(-2, -1))
+    return (numerator + epsilon) / (denominator + epsilon)
+    # return 1 - torch.mean((numerator + epsilon) / (denominator + epsilon))
+
+# DONE
 class SoftDiceLoss(nn.Module):
-    def __init__(self, use_softmax=True):
+    def __init__(self, reduction='none', use_softmax=True):
         """
         Args:
             use_softmax: Set it to False when use the function for testing purpose
         """
         super(SoftDiceLoss, self).__init__()
         self.use_softmax = use_softmax
+        self.reduction = reduction
 
     def forward(self, output, target, epsilon=1e-6):
         """
@@ -79,11 +91,15 @@ class SoftDiceLoss(nn.Module):
             output = F.softmax(output, dim=1)
         one_hot_target = F.one_hot(target.to(torch.int64), num_classes=num_classes).permute((0, 3, 1, 2)).to(torch.float)
         assert output.shape == one_hot_target.shape
-        numerator = 2. * torch.sum(output * one_hot_target, dim=(-2, -1))
-        denominator = torch.sum(output + one_hot_target, dim=(-2, -1))
-        return 1 - torch.mean((numerator + epsilon) / (denominator + epsilon))
+        if self.reduction == 'none':
+            return 1.0 - soft_dice_loss(output, one_hot_target)
+        elif self.reduction == 'mean':
+            return 1.0 - torch.mean(soft_dice_loss(output, one_hot_target))
+        else:
+            raise NotImplementedError(f"Invalid reduction mode: {self.reduction}")
 
 
+# NOT SURE
 class BatchSoftDice(nn.Module):
     def __init__(self, use_square=False):
         """
@@ -118,6 +134,7 @@ class BatchSoftDice(nn.Module):
         # return 1 - torch.sum(torch.mean(((numerator + epsilon) / (denominator + epsilon)), dim=1))
 
 
+# DONE
 class FocalLoss(nn.Module):
     def __init__(self, alpha, gamma=2.0, reduction='none', eps=None):
         super(FocalLoss, self).__init__()
@@ -146,6 +163,7 @@ class FocalLoss(nn.Module):
             raise NotImplementedError(f"Invalid reduction mode: {self.reduction}")
 
 
+# DONE
 class TverskyLoss(nn.Module):
     """
     Tversky Loss is the generalization of Dice Loss
@@ -177,6 +195,7 @@ class TverskyLoss(nn.Module):
         return 1 - torch.mean((numerator + epsilon) / (denominator + epsilon))
 
 
+# DONE
 class FocalTverskyLoss(nn.Module):
     """
     More information about this loss, see: https://arxiv.org/pdf/1810.07842.pdf
@@ -205,6 +224,7 @@ class FocalTverskyLoss(nn.Module):
         return torch.sum(torch.pow(1.0 - TI, self.gamma))
 
 
+# DONE
 class LogCoshDiceLoss(nn.Module):
     """
     L_{lc-dce} = log(cosh(DiceLoss)
@@ -268,6 +288,7 @@ def sensitivity_specificity_loss(y_true, y_pred, w):
     return 1.0 - torch.mean(w * sensitivity + (1 - w) * specificity)
 
 
+# DONE
 class SensitivitySpecificityLoss(nn.Module):
     def __init__(self, weight=0.5):
         """
@@ -286,12 +307,64 @@ class SensitivitySpecificityLoss(nn.Module):
         return sensitivity_specificity_loss(target, output, self.weight)
 
 
+# TODO: NOT IMPLEMENTED
+class ShapeAwareLoss(nn.Module):
+    def __init__(self):
+        super(ShapeAwareLoss, self).__init__()
+
+    def forward(self, output, target):
+        pass
+
+
+# TODO: NOT IMPLEMENTED
+class CompoundedLoss(nn.Module):
+    def __init__(self):
+        super(CompoundedLoss, self).__init__()
+        pass
+
+    def forward(self, output, target):
+        pass
+
+
+# TODO: NOT IMPLEMENTED
+class ComboLoss(nn.Module):
+    def __init__(self):
+        super(ComboLoss, self).__init__()
+        pass
+
+    def forward(self):
+        pass
+
+
+# TODO: IN PROGRESS
+class ExponentialLogarithmicLoss(nn.Module):
+    """
+    This loss is focuses on less accurately predicted structures using the combination of Dice Loss ans Cross Entropy
+    Loss
+    """
+    def __init__(self, gamma_dice, gamma_cross, use_softmax=True):
+        super(ExponentialLogarithmicLoss, self).__init__()
+        self.gamma_dice = gamma_dice
+        self.gamma_cross = gamma_cross
+        self.use_softmax = use_softmax
+
+    def forward(self, output, target):
+        num_classes = output.shape[1]
+        target = F.one_hot(target.to(torch.int64), num_classes=num_classes).permute((0, 3, 1, 2)).to(torch.float)
+        if self.use_softmax:
+            output = F.softmax(output, dim=1)
+        dice = 1.0 - soft_dice_loss(output, target)
+        l_dice = torch.mean(torch.pow(-torch.log(dice), self.gamma_dice), dim=1)   # mean w.r.t to label
+        # TODO: Hard to compute the l_cross, see original paper: https://arxiv.org/pdf/1809.00076.pdf
+        pass
+
+
 # This is use for testing purpose
 if __name__ == '__main__':
     # Test Soft Dice Loss
     # loss = FocalLoss(alpha=1.0, reduction='mean', gamma=1)
     # output_ is represent
-    loss = LogCoshDiceLoss(use_softmax=False)
+    loss = SoftDiceLoss(reduction='mean', use_softmax=False)
     # output = torch.randn((1, 2, 1, 1), requires_grad=True)
     # target = torch.empty((1, 1, 1), dtype=torch.float).random_(2)
     # output_ = F.one_hot(target.to(torch.int64), num_classes=2).permute((0, 3, 1, 2))
@@ -299,19 +372,10 @@ if __name__ == '__main__':
     target = torch.empty((10, 3, 5), dtype=torch.float).random_(5)
     output_ = F.one_hot(target.to(torch.int64), num_classes=5).permute((0, 3, 1, 2)).to(torch.float)
     output_.requires_grad = True
-    # print(output_.shape)
-    # print(output)
-    print(output_)
+    # print(output_)
     print(target)
     loss_ = loss(output_, target)
-    loss_.backward()
+    # loss_.backward()
     print(output.grad)
     print(loss_.shape)
     print(loss_)
-
-    # print(output_.grad)
-    # loss_ = loss(output, target)
-    # print(output.grad)
-    # print(loss_.shape)
-    # loss_.backward()
-    # print(output.grad)
