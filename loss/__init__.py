@@ -288,7 +288,7 @@ def sensitivity_specificity_loss(y_true, y_pred, w):
     return 1.0 - torch.mean(w * sensitivity + (1 - w) * specificity)
 
 
-# DONE
+# XXX Bugs
 class SensitivitySpecificityLoss(nn.Module):
     def __init__(self, weight=0.5):
         """
@@ -336,46 +336,79 @@ class ComboLoss(nn.Module):
         pass
 
 
-# TODO: IN PROGRESS
+# DONE
 class ExponentialLogarithmicLoss(nn.Module):
     """
     This loss is focuses on less accurately predicted structures using the combination of Dice Loss ans Cross Entropy
     Loss
+    
+    Original paper: https://arxiv.org/pdf/1809.00076.pdf
+    
+    See the paper at 2.2 w_l = ((Sum k f_k) / f_l) ** 0.5 is the label weight
+    
+    Note: 
+        - Input for CrossEntropyLoss is the logits - Raw output from the model
     """
-    def __init__(self, gamma_dice, gamma_cross, use_softmax=True):
+    
+    def __init__(self, w_dice=0.5, w_cross=0.5, gamma=0.3, use_softmax=True, class_weights=None):
         super(ExponentialLogarithmicLoss, self).__init__()
-        self.gamma_dice = gamma_dice
-        self.gamma_cross = gamma_cross
+        self.w_dice = w_dice
+        self.gamma = gamma
+        self.w_cross = w_cross
         self.use_softmax = use_softmax
+        self.class_weights = class_weights
 
-    def forward(self, output, target):
+    def forward(self, output, target, epsilon=1e-6):
         num_classes = output.shape[1]
+        assert len(self.class_weights) == num_classes, "Class weight must be not None and must be a Tensor of size C - Number of classes"
+        
+        # Generate the class weights array. Shape (batch_size, height, width), at pixel n, the nuber is the weight of the true class
+        weight_map = self.class_weights[target]
+        
         target = F.one_hot(target.to(torch.int64), num_classes=num_classes).permute((0, 3, 1, 2)).to(torch.float)
         if self.use_softmax:
             output = F.softmax(output, dim=1)
-        dice = 1.0 - soft_dice_loss(output, target)
-        l_dice = torch.mean(torch.pow(-torch.log(dice), self.gamma_dice), dim=1)   # mean w.r.t to label
-        # TODO: Hard to compute the l_cross, see original paper: https://arxiv.org/pdf/1809.00076.pdf
-        pass
+        
+        l_dice = torch.mean(torch.pow(-torch.log(soft_dice_loss(output, target)), self.gamma))   # mean w.r.t to label
+        l_cross = torch.mean(torch.mul(weight_map, torch.pow(F.cross_entropy(output, target, reduction='none'), self.gamma)))
+        return self.w_dice * l_dice + self.w_cross * l_cross
 
 
 # This is use for testing purpose
 if __name__ == '__main__':
-    # Test Soft Dice Loss
     # loss = FocalLoss(alpha=1.0, reduction='mean', gamma=1)
-    # output_ is represent
-    loss = SoftDiceLoss(reduction='mean', use_softmax=False)
+    # loss = SoftDiceLoss(reduction='none', use_softmax=False)
+    # loss = SensitivitySpecificityLoss(weight=0.5)
+    # loss = LogCoshDiceLoss(use_softmax=True)
+    # loss = BatchSoftDice(use_square=False)
+    # loss = TverskyLoss()
+    # loss = FocalTverskyLoss()
+    loss = ExponentialLogarithmicLoss(use_softmax=False, class_weights=torch.tensor([0.2, 0.4, 0.1, 0.1, 0.1, 0.1]))
+    
+    ###### Binary classification test ######
     # output = torch.randn((1, 2, 1, 1), requires_grad=True)
     # target = torch.empty((1, 1, 1), dtype=torch.float).random_(2)
     # output_ = F.one_hot(target.to(torch.int64), num_classes=2).permute((0, 3, 1, 2))
-    output = torch.randn((10, 5, 3, 5), requires_grad=True)
-    target = torch.empty((10, 3, 5), dtype=torch.float).random_(5)
-    output_ = F.one_hot(target.to(torch.int64), num_classes=5).permute((0, 3, 1, 2)).to(torch.float)
+    
+    ###### Multiple classes classification test ######
+    batch_size = 2
+    n_classes = 6
+    height = 3 
+    width = 5
+    
+    output = torch.randn((batch_size, n_classes, height, width), requires_grad=True)  # Shape: n_samples, n_classes, h, w 
+    target = torch.empty((batch_size, height, width), dtype=torch.long).random_(n_classes)   # Shape: n_samples, h, w, each cell represent the class index
+    
+    output_ = F.one_hot(target.to(torch.int64), num_classes=n_classes).permute((0, 3, 1, 2)).to(torch.float)
     output_.requires_grad = True
-    # print(output_)
-    print(target)
-    loss_ = loss(output_, target)
+    
+    print(f'Output_: {output_}')
+    print(f'Target: {target}')
+    
+    # print(f'Target: {target}')
+    loss_ = loss(output_, target)    
+    
     # loss_.backward()
-    print(output.grad)
-    print(loss_.shape)
-    print(loss_)
+    # print(output_.grad)
+    print(f'Loss shape: {loss_.shape}')
+    print(f'Loss value: {loss_}')
