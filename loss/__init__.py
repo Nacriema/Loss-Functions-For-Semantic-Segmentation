@@ -23,18 +23,29 @@ probability, inside the forward pass we just convert the logits into it
 
 Should use each function, because most other functions like Exponential Logarithmic Loss use the result of the defined
 function above for compute.
+
+Difference between BCELoss and CrossEntropy Loss when consider with mutiple classification (n_classes >= 3):
+    - When I'm reading about the fomular of CrossEntropy Loss for multiple class case, then I see the loss just "inclue" the t*ln(p) part, but not the (1 - t)ln(1 - p)
+    for the "background" class. Then it can not "capture" the properties between each class with the background, just between each class together. 
+    - Then I'm reading from this thread https://github.com/ultralytics/yolov5/issues/5401, the author give me the same idea. 
+
+
+Reference papers: 
+    * https://arxiv.org/pdf/2006.14822.pdf
+
 """
 import torch
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, BCELoss
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 def get_loss(name):
     if name is None:
-        name = 'bce'
+        name = 'bce_logit'
     return {
-        'bce': BCEWithLogitsLoss,
+        'bce': BCELoss,
+        'bce_logit': BCEWithLogitsLoss,
         'cross_entropy': CrossEntropyLoss,
         'soft_dice': SoftDiceLoss,
         'bach_soft_dice': BatchSoftDice,
@@ -42,7 +53,8 @@ def get_loss(name):
         'tversky': TverskyLoss,
         'focal_tversky': FocalTverskyLoss,
         'log_cosh_dice': LogCoshDiceLoss,
-        'sensitivity_specificity': SensitivitySpecificityLoss
+        'sensitivity_specificity': SensitivitySpecificityLoss, 
+        'exponential_logarithmic': ExponentialLogarithmicLoss,
     }[name]
 
 
@@ -308,15 +320,6 @@ class SensitivitySpecificityLoss(nn.Module):
 
 
 # TODO: NOT IMPLEMENTED
-class ShapeAwareLoss(nn.Module):
-    def __init__(self):
-        super(ShapeAwareLoss, self).__init__()
-
-    def forward(self, output, target):
-        pass
-
-
-# TODO: NOT IMPLEMENTED
 class CompoundedLoss(nn.Module):
     def __init__(self):
         super(CompoundedLoss, self).__init__()
@@ -326,14 +329,49 @@ class CompoundedLoss(nn.Module):
         pass
 
 
-# TODO: NOT IMPLEMENTED
+# DONE
 class ComboLoss(nn.Module):
-    def __init__(self):
-        super(ComboLoss, self).__init__()
-        pass
+    """
+    It is defined as a weighted sum of Dice loss and a modified cross entropy. It attempts to leverage the 
+    flexibility of Dice loss of class imbalance and at same time use cross-entropy for curve smoothing. 
+    
+    This loss will look like "batch bce-loss" when we consider all pixels flattened are predicted as correct or not
 
-    def forward(self):
-        pass
+    Paper: https://arxiv.org/pdf/1805.02798.pdf. See the original paper at formula (3)
+    Author's implementation in Keras : https://github.com/asgsaeid/ComboLoss/blob/master/combo_loss.py
+
+    This loss is perfect loss when the training loss come to -0.5 (with the default config)
+    """
+    def __init__(self, use_softmax=True, ce_w=0.5, ce_d_w=0.5, eps=1e-12):
+        super(ComboLoss, self).__init__()
+        self.use_softmax = use_softmax
+        self.ce_w = ce_w
+        self.ce_d_w = ce_d_w
+        self.eps = 1e-12
+        self.smooth = 1
+
+    def forward(self, output, target):
+        num_classes = output.shape[1]
+        
+        # Apply softmax to the output to present it in probability.
+        if self.use_softmax:
+            output = F.softmax(output, dim=1)
+        
+        one_hot_target = F.one_hot(target.to(torch.int64), num_classes=num_classes).permute((0, 3, 1, 2)).to(torch.float)
+        
+        # At this time, the output and one_hot_target have the same shape        
+        y_true_f = torch.flatten(one_hot_target)
+        y_pred_f = torch.flatten(output)
+        intersection = torch.sum(y_true_f * y_pred_f)
+        d = (2. * intersection + self.smooth) / (torch.sum(y_true_f) + torch.sum(y_pred_f) + self.smooth)
+
+        # From this thread: https://discuss.pytorch.org/t/bceloss-how-log-compute-log-0/11390. Use this trick to advoid nan when log(0) and log(1)
+        out = - (self.ce_w * y_true_f * torch.log(y_pred_f + self.eps) + (1 - self.ce_w) * (1.0 - y_true_f) * torch.log(1.0 - y_pred_f + self.eps))
+        weighted_ce = torch.mean(out, axis=-1)
+
+        # Due to this is the hibird loss, then the loss can become negative: https://discuss.pytorch.org/t/negative-value-in-my-loss-function/101776
+        combo = (self.ce_d_w * weighted_ce) - ((1 - self.ce_d_w) * d)
+        return combo
 
 
 # DONE
@@ -376,15 +414,19 @@ class ExponentialLogarithmicLoss(nn.Module):
 
 # This is use for testing purpose
 if __name__ == '__main__':
+    # loss = BCEWithLogitsLoss(reduction="none")
+    # loss = BCELoss()
+    # loss = CrossEntropyLoss()
     # loss = FocalLoss(alpha=1.0, reduction='mean', gamma=1)
-    # loss = SoftDiceLoss(reduction='none', use_softmax=False)
+    # loss = SoftDiceLoss(reduction='mean', use_softmax=False)
     # loss = SensitivitySpecificityLoss(weight=0.5)
     # loss = LogCoshDiceLoss(use_softmax=True)
     # loss = BatchSoftDice(use_square=False)
     # loss = TverskyLoss()
-    # loss = FocalTverskyLoss()
-    loss = ExponentialLogarithmicLoss(use_softmax=False, class_weights=torch.tensor([0.2, 0.4, 0.1, 0.1, 0.1, 0.1]))
-    
+    # loss = FocalTverskyLoss(use_softmax=True)
+    # loss = ExponentialLogarithmicLoss(use_softmax=True, class_weights=torch.tensor([0.2, 0.4, 0.1, 0.1, 0.1, 0.1]))
+    loss = ComboLoss(use_softmax=True, ce_d_w=0.5, ce_w=0.5)
+
     ###### Binary classification test ######
     # output = torch.randn((1, 2, 1, 1), requires_grad=True)
     # target = torch.empty((1, 1, 1), dtype=torch.float).random_(2)
@@ -398,17 +440,21 @@ if __name__ == '__main__':
     
     output = torch.randn((batch_size, n_classes, height, width), requires_grad=True)  # Shape: n_samples, n_classes, h, w 
     target = torch.empty((batch_size, height, width), dtype=torch.long).random_(n_classes)   # Shape: n_samples, h, w, each cell represent the class index
-    
-    output_ = F.one_hot(target.to(torch.int64), num_classes=n_classes).permute((0, 3, 1, 2)).to(torch.float)
+    output_ = F.one_hot(target.to(torch.int64), num_classes=n_classes).permute((0, 3, 1, 2)).to(torch.float)  # Mimic the "ideal" model output after going through sigmoid function
     output_.requires_grad = True
     
-    print(f'Output_: {output_}')
-    print(f'Target: {target}')
+    print(f'Output shape: {output.shape}')
+    print(f'Output_ shape: {output_.shape}')
+    print(f'Target shape: {target.shape}')
+
+    # TEST: Test loss between the logit output of the model and the groud truth label then we need to enable the use_softmax=True flag to True when init the loss function to test this
+    loss_1 = loss(output, target) 
+    print(f'Loss 1 value: {loss_1}')
+    loss_1.backward()
+    print(output.grad)  
     
-    # print(f'Target: {target}')
-    loss_ = loss(output_, target)    
-    
-    # loss_.backward()
-    # print(output_.grad)
-    print(f'Loss shape: {loss_.shape}')
-    print(f'Loss value: {loss_}')
+    # TEST: Test loss function when the input and target are the same (model prediction will be output like the one-hot encoded vector, so set the use_softmax=False when init the loss function to test this)
+    # loss_2 = loss(output_, target)   
+    # print(f'Loss 2 value: {loss_2}')
+    # loss_2.backward()
+    # print(output.grad)

@@ -196,7 +196,7 @@ Paper: https://arxiv.org/pdf/1806.07564.pdf
 
 -------------------------------------------
 
-## Combo Loss 
+## Combo Loss (Implemented)
 
 ## Exponential Logarithmic Loss
 
@@ -207,6 +207,7 @@ Paper: https://arxiv.org/pdf/1806.07564.pdf
 
 
 ### TODO
+- [ ] Crop small image chunks for testing with the loss function, I need to be sure with the `Hough loss`, so I need to do that 
 - [ ] Next version, base on Kornia library (https://github.com/kornia/kornia), I implememted the stable version that can apply to higher dimensional Tensor,
 that'll look like what the loss functions in Pytorch does.
 - [ ] Read papers about the rest loss functions and try hard to implement it.
