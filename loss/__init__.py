@@ -55,6 +55,7 @@ def get_loss(name):
         'log_cosh_dice': LogCoshDiceLoss,
         'sensitivity_specificity': SensitivitySpecificityLoss, 
         'exponential_logarithmic': ExponentialLogarithmicLoss,
+        'combo': ComboLoss,
     }[name]
 
 
