@@ -170,7 +170,7 @@ when ![](https://latex.codecogs.com/svg.image?y&space;=&space;\hat{p}&space;=&sp
 **Multi-class task:**
 
 This loss is introduced in V-Net (2016), called **Soft Dice Loss**: used to tackle the class imbalance without the need 
-for explicit weighting (which is used in **Weighted Cross Entropy**). One possible formulation is: 
+for explicit weighting (which is used in **Weighted Cross Entropy**). One possible formulation is:
 
 
 ## Batch Soft Dice (This is a variance of Soft Dice) (Implemented but not sure)
@@ -185,11 +185,15 @@ for explicit weighting (which is used in **Weighted Cross Entropy**). One possib
 
 ## Hausdorff Distance Loss (Need time to read more papers)
 
-References: 
+```text
+References:
 
-Github: https://github.com/HaipengXiong/weighted-hausdorff-loss
+    Github: https://github.com/HaipengXiong/weighted-hausdorff-loss
 
-Paper: https://arxiv.org/pdf/1806.07564.pdf
+    Paper: https://arxiv.org/pdf/1806.07564.pdf
+```
+
+## Blob loss
 
 
 ## Shape aware loss
@@ -204,7 +208,8 @@ Paper: https://arxiv.org/pdf/1806.07564.pdf
 * A survey of loss functions for semantic segmentation (Shruti Jadon - 2020).
 * Segmentation of Head and Neck Organs at Risk Using CNN with Batch Dice Loss (2018).
 * Discussion about the class weight compute: https://stackoverflow.com/questions/61414065/pytorch-weight-in-cross-entropy-loss
-
+* Blob loss: instance imbalance aware loss functions
+for semantic segmentation: https://arxiv.org/pdf/2205.08209.pdf
 
 ### TODO
 - [ ] Crop small image chunks for testing with the loss function, I need to be sure with the `Hough loss`, so I need to do that 
