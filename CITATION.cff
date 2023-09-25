@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use my implementation for your work, please cite it as below."
+authors:
+- family-names: "Truong"
+  given-names: "Mai Huy"
+  orcid: "https://orcid.org/0009-0009-2686-9621"
+title: "Loss Functions for Semantic Segmentation In Pytorch"
+version: 0.1.0
+date-released: 2023-09-25
+url: "https://github.com/Nacriema/Loss-Functions-For-Semantic-Segmentation"
