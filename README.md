@@ -42,7 +42,7 @@ variable or set of events.
 
 Binary Cross-Entropy (BCE) is defined as: 
 
-![](https://latex.codecogs.com/svg.image?L_{BCE}(y,&space;\hat{y})&space;=&space;-(ylog(\hat{y})&space;&plus;&space;(1&space;-&space;y)log(1&space;-&space;\hat{y})))
+> ![](https://latex.codecogs.com/svg.image?L_{BCE}(y,&space;\hat{y})&space;=&space;-(ylog(\hat{y})&space;&plus;&space;(1&space;-&space;y)log(1&space;-&space;\hat{y})))
 
 In this case, we just have 2 classes. If more classes, then the fomula become the sum of more terms, and the values 
 inside log is result of **softmax** - which apply on tensor instead of **sigmoid** - which apply on a scalar.
@@ -54,7 +54,7 @@ Read more at: https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html#to
 
 **Multi-class case:**
 
-![](https://latex.codecogs.com/svg.image?L_{CE}&space;=&space;-&space;\frac{1}{N}&space;\sum_{c=1}^{N}\sum_{l=1}^{L}r_l^clog(p_l^c))
+> ![](https://latex.codecogs.com/svg.image?L_{CE}&space;=&space;-&space;\frac{1}{N}&space;\sum_{c=1}^{N}\sum_{l=1}^{L}r_l^clog(p_l^c))
 
 N: number of pixels need to classify in a minibatch
 
@@ -69,21 +69,16 @@ $r^c$: Notation for one hot encoded vector, where 1 stand for class it belong an
 
 The relation between $l^c$ and $p^c$ when use model to predict:
 
-![](https://latex.codecogs.com/svg.image?l^c&space;=&space;arg&space;\underset{l}{max}&space;({p_l^c})&space;&space;)
-
-
-
+> ![](https://latex.codecogs.com/svg.image?l^c&space;=&space;arg&space;\underset{l}{max}&space;({p_l^c})&space;&space;)
 
 Ok, we move to the next term.
-
-
 
 ## Weighted Binary Cross-Entropy (WCE)
 
 It is the variance of binary cross entropy. It is widely used in case of skewed data (the number of instance in each 
 class is imbalance):
 
-![](https://latex.codecogs.com/svg.image?L_{W-BCE}(y,&space;\hat{y})&space;=&space;-(\beta&space;*&space;ylog(\hat{y})&space;&plus;&space;(1&space;-&space;y)log(1&space;-&space;\hat{y})))
+> ![](https://latex.codecogs.com/svg.image?L_{W-BCE}(y,&space;\hat{y})&space;=&space;-(\beta&space;*&space;ylog(\hat{y})&space;&plus;&space;(1&space;-&space;y)log(1&space;-&space;\hat{y})))
 
 **Multi-class case:**
 
@@ -92,7 +87,7 @@ represented class labels (instance less then weight class hight)
 
 class_weight computed in sklearn equivalent to term 1/w_c in the above equaltion:
 
-![](https://latex.codecogs.com/svg.image?L_{WCE}&space;=&space;-&space;\frac{1}{N}&space;\sum_{c=1}^{N}&space;\frac{1}{w_c}\sum_{l=1}^{L}r_l^c&space;log(p_l^c))
+> ![](https://latex.codecogs.com/svg.image?L_{WCE}&space;=&space;-&space;\frac{1}{N}&space;\sum_{c=1}^{N}&space;\frac{1}{w_c}\sum_{l=1}^{L}r_l^c&space;log(p_l^c))
 
 
 One way to achieve the weight is taken from the one-hot $r^c$, example:
@@ -128,7 +123,7 @@ Note: (I quite dont understand the note inside the paper)
 
 It is similar to Weighted Cross Entropy. The only difference is that we also add weight to negative examples.
 
-![](https://latex.codecogs.com/svg.image?L_{BCE}(y,&space;\hat{y})&space;=&space;-(\beta&space;*&space;ylog(\hat{y})&space;&plus;&space;(1&space;-&space;\beta)*(1&space;-&space;y)log(1&space;-&space;\hat{y})))
+> ![](https://latex.codecogs.com/svg.image?L_{BCE}(y,&space;\hat{y})&space;=&space;-(\beta&space;*&space;ylog(\hat{y})&space;&plus;&space;(1&space;-&space;\beta)*(1&space;-&space;y)log(1&space;-&space;\hat{y})))
 
 
 ## Focal Loss (Implemented)
@@ -141,7 +136,7 @@ the model to focus more on learning hard examples.
 
 Focal Loss proposes to down-weight easy examples and focus training on hard negatives using a modulating factor:
 
-![](https://latex.codecogs.com/svg.image?FL(p_t)&space;=&space;-\alpha_t(1-p_t)^{\gamma}log(p_t))
+> ![](https://latex.codecogs.com/svg.image?FL(p_t)&space;=&space;-\alpha_t(1-p_t)^{\gamma}log(p_t))
 
 Here gamma > 0 and when gamma = 1. Focal Loss works like Cross Entropy Loss function. Similarly, alpha in range [0, 1].
 It can be set by inverse class frequency or treated as a hyper-parameter.
@@ -155,14 +150,14 @@ It can be set by inverse class frequency or treated as a hyper-parameter.
 Dice coefficient is widely used metric in computer vision to calculate the similarity between 2 image. Later in 2016, it
 has also adapted as loss function known as Dice Loss
 
-Visualize for Dice Coefficient in set theory: 
+Visualize for Dice Coefficient in set theory:
 
-![](https://latex.codecogs.com/svg.image?DSC&space;=&space;\frac{2\left|&space;A&space;\cap&space;B\right|}{\left|A&space;\right|&space;&plus;&space;\left|&space;B\right|})
+> ![](https://latex.codecogs.com/svg.image?DSC&space;=&space;\frac{2\left|&space;A&space;\cap&space;B\right|}{\left|A&space;\right|&space;&plus;&space;\left|&space;B\right|})
 
 
 **Binary classification**:
 
-![](https://latex.codecogs.com/svg.image?DL(y,&space;\hat{p})&space;=&space;1&space;-&space;\frac{2y\hat{p}&space;&plus;&space;1}{y&space;&plus;&space;\hat{p}&space;&plus;&space;1})
+> ![](https://latex.codecogs.com/svg.image?DL(y,&space;\hat{p})&space;=&space;1&space;-&space;\frac{2y\hat{p}&space;&plus;&space;1}{y&space;&plus;&space;\hat{p}&space;&plus;&space;1})
 
 Here 1 is added in numerator and denominator to ensure that the function is not undefined in edge case scenarios such as 
 when ![](https://latex.codecogs.com/svg.image?y&space;=&space;\hat{p}&space;=&space;0). 
@@ -185,16 +180,15 @@ for explicit weighting (which is used in **Weighted Cross Entropy**). One possib
 
 ## Hausdorff Distance Loss (Need time to read more papers)
 
-```text
 References:
 
-    Github: https://github.com/HaipengXiong/weighted-hausdorff-loss
-
-    Paper: https://arxiv.org/pdf/1806.07564.pdf
-```
+Github: https://github.com/HaipengXiong/weighted-hausdorff-loss, Paper: https://arxiv.org/pdf/1806.07564.pdf
 
 ## Blob loss
 
+References:
+
+Github: https://github.com/neuronflow/blob_loss, Paper: https://arxiv.org/abs/2205.08209
 
 ## Shape aware loss
 
@@ -202,7 +196,7 @@ References:
 
 ## Combo Loss (Implemented)
 
-## Exponential Logarithmic Loss
+## Exponential Logarithmic Loss (Implemented)
 
 ### References:
 * A survey of loss functions for semantic segmentation (Shruti Jadon - 2020).
