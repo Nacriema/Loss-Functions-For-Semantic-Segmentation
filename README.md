@@ -198,7 +198,21 @@ Github: https://github.com/neuronflow/blob_loss, Paper: https://arxiv.org/abs/22
 
 ## Exponential Logarithmic Loss (Implemented)
 
+## Robust T-Loss
+
+This loss will be used when tackle with the noisy annotation dataset. Inspired by the negative log-likekihood of the `Student-t` distribution.
+
+References:
+* Page: https://robust-tloss.github.io/
+* Paper: https://robust-tloss.github.io/static/files/tloss.pdf
+* Code: https://github.com/Digital-Dermatology/t-loss
+* Questions:
+    * T-Distribution vs Normal Distribution [link](https://datascience.stackexchange.com/questions/62958/when-to-use-t-distribution-instead-of-normal-distribution#:~:text=Student%20t%2Ddistribution%20handles%20estimated,(and%20Ii)%20errors).
+    * Comarision [link](https://www.statology.org/normal-distribution-vs-t-distribution/).
+
+
 ### References:
+* Assumption with the loss functions. [Link](https://www.quora.com/Why-does-minimizing-l_2-loss-come-from-the-assumption-that-the-data-is-drawn-from-a-Gaussian-distribution)
 * A survey of loss functions for semantic segmentation (Shruti Jadon - 2020).
 * Segmentation of Head and Neck Organs at Risk Using CNN with Batch Dice Loss (2018).
 * Discussion about the class weight compute: https://stackoverflow.com/questions/61414065/pytorch-weight-in-cross-entropy-loss
