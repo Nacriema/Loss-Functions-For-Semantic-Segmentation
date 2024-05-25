@@ -40,7 +40,7 @@ Reference papers:
 import torch
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, BCELoss
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa
 
 
 def get_loss(name):
@@ -273,6 +273,7 @@ def sensitivity_specificity_loss(y_true, y_pred, w):
     Args:
         y_true: probability (one hot) shape [batch, n_classes, h, w]
         y_pred: probability (softmax(output) or sth like that) shape [batch, n_classes, h, w]
+        w: weight for the combination of sensitivity and specificity
     Returns:
         Loss: A tensor
     """
