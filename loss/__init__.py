@@ -9,7 +9,7 @@ Created on Nov 17 12:48:36 2021
 Refs:
 
 I build the collection of loss that used in Segmentation Task, beside the Standard Loss provided by Pytorch, I also
-implemented some loss that can be used to enhanced the training process.
+implemented some loss that can be used to enhance the training process.
 
 For me: Loss function is computed by comparing between probabilities, so in each Loss function if we pass logit as input
 then we should convert them into probability. One-hot encoding also a form of probability.
@@ -17,17 +17,20 @@ then we should convert them into probability. One-hot encoding also a form of pr
 For testing purpose, we should crete ideal probability for compare them. Then I give the loss function option use soft
 max or not.
 
-May be I need to convert each function inside the forward pass to the function that take the input and target as softmax
+Maybe I need to convert each function inside the forward pass to the function that take the input and target as softmax
 probability, inside the forward pass we just convert the logits into it
 
 
 Should use each function, because most other functions like Exponential Logarithmic Loss use the result of the defined
 function above for compute.
 
-Difference between BCELoss and CrossEntropy Loss when consider with mutiple classification (n_classes >= 3):
-    - When I'm reading about the fomular of CrossEntropy Loss for multiple class case, then I see the loss just "inclue" the t*ln(p) part, but not the (1 - t)ln(1 - p)
-    for the "background" class. Then it can not "capture" the properties between each class with the background, just between each class together. 
-    - Then I'm reading from this thread https://github.com/ultralytics/yolov5/issues/5401, the author give me the same idea. 
+Difference between BCELoss and CrossEntropy Loss when consider with multiple classification (n_classes >= 3):
+    - When I'm reading about the formula of CrossEntropy Loss for multiple class case, then I see the loss just
+    "include" the t*ln(p) part, but not the (1 - t)ln(1 - p)
+    for the "background" class. Then it can not "capture" the properties between each class with the background, just
+    between each class together.
+    - Then I'm reading from this thread https://github.com/ultralytics/yolov5/issues/5401, the author give me the same
+    idea.
 
 
 Reference papers: 
@@ -48,7 +51,7 @@ def get_loss(name):
         'bce_logit': BCEWithLogitsLoss,
         'cross_entropy': CrossEntropyLoss,
         'soft_dice': SoftDiceLoss,
-        'bach_soft_dice': BatchSoftDice,
+        'batch_soft_dice': BatchSoftDice,
         'focal': FocalLoss,
         'tversky': TverskyLoss,
         'focal_tversky': FocalTverskyLoss,
@@ -64,6 +67,7 @@ def soft_dice_loss(output, target, epsilon=1e-6):
     denominator = torch.sum(output + target, dim=(-2, -1))
     return (numerator + epsilon) / (denominator + epsilon)
     # return 1 - torch.mean((numerator + epsilon) / (denominator + epsilon))
+
 
 # DONE
 class SoftDiceLoss(nn.Module):
@@ -117,7 +121,7 @@ class BatchSoftDice(nn.Module):
     def __init__(self, use_square=False):
         """
         Args:
-            use_square: If use square then the denominator will the sum of square
+            use_square: If True, then the denominator will the sum of square.
         """
         super(BatchSoftDice, self).__init__()
         self._use_square = use_square
@@ -199,7 +203,7 @@ class TverskyLoss(nn.Module):
         target = F.one_hot(target.to(torch.int64), num_classes=num_classes).permute((0, 3, 1, 2)).to(torch.float)
         assert output.shape == target.shape
         # Notice: TverskyIndex is numerator / denominator
-        # See https://en.wikipedia.org/wiki/Tversky_index and we have the quick comparison between probability and set \
+        # See https://en.wikipedia.org/wiki/Tversky_index, we have the quick comparison between probability and set \
         # G is the Global Set, A_ = G - A, then
         # |A - B| = |A ^ B_| = |A ^ (G - B)| so |A - B| in set become (1 - target) * (output)
         # With ^ = *, G = 1
@@ -274,7 +278,7 @@ def sensitivity_specificity_loss(y_true, y_pred, w):
     """
     assert y_true.shape == y_pred.shape
     n_classes = y_true.shape[1]
-    confusion_matrix = torch.zeros((n_classes, n_classes), dtype=torch.float)
+    confusion_matrix = torch.zeros((n_classes, n_classes), dtype=torch.float).to(y_true.device)
     y_true = torch.argmax(y_true, dim=1)  # Reduce to [batch, h, w]
     y_pred = torch.argmax(y_pred, dim=1)
     # Use trick to compute the confusion matrix
@@ -366,11 +370,13 @@ class ComboLoss(nn.Module):
         intersection = torch.sum(y_true_f * y_pred_f)
         d = (2. * intersection + self.smooth) / (torch.sum(y_true_f) + torch.sum(y_pred_f) + self.smooth)
 
-        # From this thread: https://discuss.pytorch.org/t/bceloss-how-log-compute-log-0/11390. Use this trick to advoid nan when log(0) and log(1)
+        # From this thread: https://discuss.pytorch.org/t/bceloss-how-log-compute-log-0/11390. Use this trick to avoid
+        # nan when log(0) and log(1)
         out = - (self.ce_w * y_true_f * torch.log(y_pred_f + self.eps) + (1 - self.ce_w) * (1.0 - y_true_f) * torch.log(1.0 - y_pred_f + self.eps))
         weighted_ce = torch.mean(out, axis=-1)
 
-        # Due to this is the hibird loss, then the loss can become negative: https://discuss.pytorch.org/t/negative-value-in-my-loss-function/101776
+        # Due to this is the hybrid loss, then the loss can become negative:
+        # https://discuss.pytorch.org/t/negative-value-in-my-loss-function/101776
         combo = (self.ce_d_w * weighted_ce) - ((1 - self.ce_d_w) * d)
         return combo
 
@@ -378,7 +384,7 @@ class ComboLoss(nn.Module):
 # DONE
 class ExponentialLogarithmicLoss(nn.Module):
     """
-    This loss is focuses on less accurately predicted structures using the combination of Dice Loss ans Cross Entropy
+    This loss is focuses on less accurately predicted structures using the combination of Dice Loss and Cross Entropy
     Loss
     
     Original paper: https://arxiv.org/pdf/1809.00076.pdf
@@ -401,7 +407,9 @@ class ExponentialLogarithmicLoss(nn.Module):
         num_classes = output.shape[1]
         assert len(self.class_weights) == num_classes, "Class weight must be not None and must be a Tensor of size C - Number of classes"
         
-        # Generate the class weights array. Shape (batch_size, height, width), at pixel n, the nuber is the weight of the true class
+        # Generate the class weights array. Shape (batch_size, height, width), at pixel n, the number is the weight of
+        # the true class
+        self.class_weights = self.class_weights.to(target.device)
         weight_map = self.class_weights[target]
         
         target = F.one_hot(target.to(torch.int64), num_classes=num_classes).permute((0, 3, 1, 2)).to(torch.float)
@@ -448,13 +456,15 @@ if __name__ == '__main__':
     print(f'Output_ shape: {output_.shape}')
     print(f'Target shape: {target.shape}')
 
-    # TEST: Test loss between the logit output of the model and the groud truth label then we need to enable the use_softmax=True flag to True when init the loss function to test this
+    # TEST: Test loss between the logit output of the model and the ground truth label then we need to enable the
+    # use_softmax=True flag to True when init the loss function to test this
     loss_1 = loss(output, target) 
     print(f'Loss 1 value: {loss_1}')
     loss_1.backward()
     print(output.grad)  
     
-    # TEST: Test loss function when the input and target are the same (model prediction will be output like the one-hot encoded vector, so set the use_softmax=False when init the loss function to test this)
+    # TEST: Test loss function when the input and target are the same (model prediction will be output like the one-hot
+    # encoded vector, so set the use_softmax=False when init the loss function to test this)
     # loss_2 = loss(output_, target)   
     # print(f'Loss 2 value: {loss_2}')
     # loss_2.backward()
