@@ -5,27 +5,27 @@ pixels grouped together define different elements in image. A method of classify
 semantic segmentation. 
 
 The choice of loss/objective function is extremely important. In the paper, they summarized 15 segmentation based loss 
-functions that have been proven to provide state of the art results in different domains. 
+functions that have been proven to provide state-of-the-art results in different domains. 
 
 Table of loss functions: 
 
-| Type      | Loss Function |
-| ----------- | ----------- |
-| **Distribution-based Loss**      |  Binary Cross-Entropy       |
-| .   | Weighted Cross-Entropy        |
-| .   | Balanced Cross-Entropy        |
-| .   | Focal Loss        |
-| .   | Distance map derived loss penalty term        |
-| **Region-based Loss**  |  Dice Loss   |
-| .  |  Sensitivity-Specificity Loss   |
-| .  |  Tversky Loss   |
-| .  |  Focal Tversky Loss   |
-| .  |  Log-Cosh Dice Loss   |
-| .  |  Log-Cosh Dice Loss   |
-| **Boundary-based Loss**  |  Hausdorff Distance loss   |
-| .  |  Shape aware loss   |
-| **Compounded Loss**  |  Combo Loss   |
-| .  |  Exponential Logarithmic Loss   |
+| Type                        | Loss Function                          |
+|-----------------------------|----------------------------------------|
+| **Distribution-based Loss** | Binary Cross-Entropy                   |
+| .                           | Weighted Cross-Entropy                 |
+| .                           | Balanced Cross-Entropy                 |
+| .                           | Focal Loss                             |
+| .                           | Distance map derived loss penalty term |
+| **Region-based Loss**       | Dice Loss                              |
+| .                           | Sensitivity-Specificity Loss           |
+| .                           | Tversky Loss                           |
+| .                           | Focal Tversky Loss                     |
+| .                           | Log-Cosh Dice Loss                     |
+| .                           | Log-Cosh Dice Loss                     |
+| **Boundary-based Loss**     | Hausdorff Distance loss                |
+| .                           | Shape aware loss                       |
+| **Compounded Loss**         | Combo Loss                             |
+| .                           | Exponential Logarithmic Loss           |
 
 Optimizer is used to optimize and learn the Objective. To learn an objective accurately and faster, we need to ensure 
 that the mathematical representation of objectives (aka loss function) are able to cover even the edge cases. 
@@ -44,7 +44,7 @@ Binary Cross-Entropy (BCE) is defined as:
 
 > ![](https://latex.codecogs.com/svg.image?L_{BCE}(y,&space;\hat{y})&space;=&space;-(ylog(\hat{y})&space;&plus;&space;(1&space;-&space;y)log(1&space;-&space;\hat{y})))
 
-In this case, we just have 2 classes. If more classes, then the fomula become the sum of more terms, and the values 
+In this case, we just have 2 classes. If more classes, then the formula become the sum of more terms, and the values 
 inside log is result of **softmax** - which apply on tensor instead of **sigmoid** - which apply on a scalar.
 
 Pytorch has the BCELoss in their built-in function.
@@ -82,10 +82,9 @@ class is imbalance):
 
 **Multi-class case:**
 
-The tendency to under-estimate can be mitigated by assigning higher weights to loss contributions from pixels with under
-represented class labels (instance less then weight class hight)
+The tendency to under-estimate can be mitigated by assigning higher weights to loss contributions from pixels with underrepresented class labels (instance less than weight class hight)
 
-class_weight computed in sklearn equivalent to term 1/w_c in the above equaltion:
+class_weight computed in sklearn equivalent to term 1/w_c in the above equation:
 
 > ![](https://latex.codecogs.com/svg.image?L_{WCE}&space;=&space;-&space;\frac{1}{N}&space;\sum_{c=1}^{N}&space;\frac{1}{w_c}\sum_{l=1}^{L}r_l^c&space;log(p_l^c))
 
@@ -95,6 +94,7 @@ One way to achieve the weight is taken from the one-hot $r^c$, example:
 ```python
 # Minibatch has size 20, we have 5 classes and in Pytorch it present by a Tensor contain index of labels instead of 
 # One Hot tensor
+import numpy as np
 import sklearn.utils.class_weight as class_weight
 import torch
 import torch.nn as nn
@@ -108,16 +108,16 @@ loss_fn = nn.CrossEntropyLoss(reduction='mean')
 # For each minibatch 
 # Compute the class weight by the code above, then change the weight by apply 
 loss_fn.weight = torch.tensor(class_weight, dtype=torch.float)
-loss = loss_fn(putput, target)
+loss = loss_fn(output, target)
 loss.backward()
 optimizer.step()
 ```
 
-And there are many way to achive weight map like the one that introduced in the paper: https://arxiv.org/abs/1505.04597
+And there are many way to achieve weight map like the one that introduced in the paper: https://arxiv.org/abs/1505.04597
 
 
 
-Note: (I quite dont understand the note inside the paper)
+Note: (I quite don't understand the note inside the paper)
 
 ## Balanced Cross-Entropy (BCE)
 
@@ -139,7 +139,7 @@ Focal Loss proposes to down-weight easy examples and focus training on hard nega
 > ![](https://latex.codecogs.com/svg.image?FL(p_t)&space;=&space;-\alpha_t(1-p_t)^{\gamma}log(p_t))
 
 Here gamma > 0 and when gamma = 1. Focal Loss works like Cross Entropy Loss function. Similarly, alpha in range [0, 1].
-It can be set by inverse class frequency or treated as a hyper-parameter.
+It can be set by inverse class frequency or treated as a hyperparameter.
 
 **Multi-class Classification Case:**
 
@@ -200,7 +200,7 @@ Github: https://github.com/neuronflow/blob_loss, Paper: https://arxiv.org/abs/22
 
 ## Robust T-Loss
 
-This loss will be used when tackle with the noisy annotation dataset. Inspired by the negative log-likekihood of the `Student-t` distribution.
+This loss will be used when tackle with the noisy annotation dataset. Inspired by the negative log-likelihood of the `Student-t` distribution.
 
 References:
 * Page: https://robust-tloss.github.io/
@@ -208,7 +208,7 @@ References:
 * Code: https://github.com/Digital-Dermatology/t-loss
 * Questions:
     * T-Distribution vs Normal Distribution [link](https://datascience.stackexchange.com/questions/62958/when-to-use-t-distribution-instead-of-normal-distribution#:~:text=Student%20t%2Ddistribution%20handles%20estimated,(and%20Ii)%20errors).
-    * Comarision [link](https://www.statology.org/normal-distribution-vs-t-distribution/).
+    * Comparison [link](https://www.statology.org/normal-distribution-vs-t-distribution/).
 
 
 ### References:
@@ -221,7 +221,7 @@ for semantic segmentation: https://arxiv.org/pdf/2205.08209.pdf
 
 ### TODO
 - [ ] Crop small image chunks for testing with the loss function, I need to be sure with the `Hough loss`, so I need to do that 
-- [ ] Next version, base on Kornia library (https://github.com/kornia/kornia), I implememted the stable version that can apply to higher dimensional Tensor,
+- [ ] Next version, base on Kornia library (https://github.com/kornia/kornia), I implemented the stable version that can apply to higher dimensional Tensor,
 that'll look like what the loss functions in Pytorch does.
 - [ ] Read papers about the rest loss functions and try hard to implement it.
 - [ ] Make a table to easy compare between them, when use these functions. 
